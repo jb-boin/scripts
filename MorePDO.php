@@ -203,8 +203,9 @@ class MorePDO extends PDO {
 	 * @return True is the connection has been killed
 	 */
 	public function disconnect() {
-		if(parent::getAttribute(PDO::ATTR_DRIVER_NAME) == "mysql") {
-			if($this->initialized) {
+		// No need to do anything if no connection were made to a server or the connection already closed
+		if($this->initialized) {
+			if(parent::getAttribute(PDO::ATTR_DRIVER_NAME) == "mysql") {
 				$PDOerrMode = $this->options[PDO::ATTR_ERRMODE];
 				// PDO::ATTR_ERRMODE will be set to SILENT as killing the connection would trigger a warning/error
 				parent::setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_SILENT);
@@ -213,12 +214,13 @@ class MorePDO extends PDO {
 				parent::setAttribute(PDO::ATTR_ERRMODE, $PDOerrMode);
 				$this->initialized = False;
 				return True;
+			} else {
+				trigger_error("disconnect() is only implemented for the mysql driver");
 			}
-		} else {
-			trigger_error("disconnect() is only implemented for the mysql driver");
 		}
 		return False;
 	}
+
 	public function close() {
 		return $this->disconnect();
 	}
