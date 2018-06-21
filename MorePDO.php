@@ -129,7 +129,12 @@ class MorePDO extends PDO {
 	 */
 	protected function initialize() {
 		// In case there would be an exception, $this->options is protected and thus not directly available
-		$PDOerrMode = $this->options[PDO::ATTR_ERRMODE];
+		if(isset($this->attributes[PDO::ATTR_ERRMODE])) {
+			// The PDO::ATTR_ERRMODE has been changed after the creation of the object using $this->setAttribute(), this is the value that will be used
+			$PDOerrMode = $this->attributes[PDO::ATTR_ERRMODE];
+		} else {
+			$PDOerrMode = $this->options[PDO::ATTR_ERRMODE];
+		}
 
 		if (!$this->initialized) {
 			try {
@@ -155,6 +160,7 @@ class MorePDO extends PDO {
 
 				// If PDO::ERRMODE_EXCEPTION is set, an exception triggers a fatal error
 				if($PDOerrMode == PDO::ERRMODE_EXCEPTION) exit(255);
+				return false;
 			}
 		} else {
 			// Re-check if the server is still connected if the last check has been done more than 4 seconds ago
@@ -206,8 +212,16 @@ class MorePDO extends PDO {
 		// No need to do anything if no connection were made to a server or the connection already closed
 		if($this->initialized) {
 			if(parent::getAttribute(PDO::ATTR_DRIVER_NAME) == "mysql") {
-				$PDOerrMode = $this->options[PDO::ATTR_ERRMODE];
-				// PDO::ATTR_ERRMODE will be set to SILENT as killing the connection would trigger a warning/error
+				// PDO::ATTR_ERRMODE will be set to SILENT as killing the connection would trigger a warning/error if its not the case
+
+				// The ATTR_ERRMODE value is saved so it will be applied back after the query has been executed
+				if(isset($this->attributes[PDO::ATTR_ERRMODE])) {
+					// The PDO::ATTR_ERRMODE has been changed after the creation of the object using $this->setAttribute(), this is the value that will be used
+					$PDOerrMode = $this->attributes[PDO::ATTR_ERRMODE];
+				} else {
+					$PDOerrMode = $this->options[PDO::ATTR_ERRMODE];
+				}
+
 				parent::setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_SILENT);
 				$this->exec("KILL CONNECTION CONNECTION_ID()");
 				// The value is set back to its original value
