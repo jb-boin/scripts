@@ -73,7 +73,7 @@ function PDO_close($dbh) {
  * Adds the $timeoutReconnect variable to set the delay to wait before trying to reconnect in case of timeout/disconnection of the server (MariaDB/MySQL specific)
  * Automatically executes "ping()" before executing queries if the last "ping()" has been ran more than 4 seconds ago
  * Hides the database password on "connect()" backtraces
- * Default options are set to PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC, PDO::ATTR_EMULATE_PREPARES => false, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+ * Default options are set to PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC, PDO::ATTR_EMULATE_PREPARES => False, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
  * Outputs queries before execution if the constant DEBUG is True
  * Inspired from https://github.com/andychase/gab/blob/master/models/PDOLazyConnector.php, https://phpdelusions.net/pdo/pdo_wrapper and https://github.com/senasi/lazy-pdo
  */
@@ -87,7 +87,7 @@ class MorePDO extends PDO {
 	/**
 	 * @var boolean True if PDO was initialized
 	 */
-	protected $initialized = false;
+	protected $initialized = False;
 
 	/**
 	 * @var array Storage for attributes which are set before initializing connection
@@ -110,7 +110,7 @@ class MorePDO extends PDO {
 	public function __construct($dsn, $username = NULL, $password = NULL, $options = []) {
 		$default_options = [
 			PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-			PDO::ATTR_EMULATE_PREPARES => false,
+			PDO::ATTR_EMULATE_PREPARES => False,
 			PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
 		];
 
@@ -120,12 +120,11 @@ class MorePDO extends PDO {
 		$this->password = $password;
 	}
 
-
 	/**
 	 * Init PDO (does the connection to the database server) once, if not already initialized
 	 * PDOException is wrapped to hide the database password from the backtrace output in case of an exception
 	 *
-	 * @return true if the connection is opened
+	 * @return True if the connection is opened
 	 */
 	protected function initialize() {
 		// In case there would be an exception, $this->options is protected and thus not directly available
@@ -140,7 +139,7 @@ class MorePDO extends PDO {
 			try {
 				// Creates the PDO object : Does the connection to the database
 				parent::__construct($this->dsn, $this->username, $this->password, $this->options);
-				$this->initialized = true;
+				$this->initialized = True;
 				$this->lastPing = time();
 
 				foreach ($this->attributes as $key => $value) {
@@ -160,7 +159,7 @@ class MorePDO extends PDO {
 
 				// If PDO::ERRMODE_EXCEPTION is set, an exception triggers a fatal error
 				if($PDOerrMode == PDO::ERRMODE_EXCEPTION) exit(255);
-				return false;
+				return False;
 			}
 		} else {
 			// Re-check if the server is still connected if the last check has been done more than 4 seconds ago
@@ -174,18 +173,21 @@ class MorePDO extends PDO {
 	/**
 	 * Check if the connection is still open and working, try to reconnect if a timeout occured
 	 *
-	 * @return true if the connection is opened and working
+	 * @return True if the connection is opened and working
 	 */
 	public function ping() {
 		$this->lastPing = time();
 		try {
-			$this->query("DO 1");
+			if(!$this->query("DO 1")) {
+				// If the initialization or this query has failed, the server is not available
+				return False;
+			}
 		} catch (PDOException $e) {
 			// wait_timeout or server restarted since last check ; this error code/message is specific to MySQL, will always throw a PDOException for other drivers
 			if(parent::getAttribute(PDO::ATTR_DRIVER_NAME) != "mysql" || $e->getCode() != 'HY000' || !stristr($e->getMessage(), 'server has gone away')) {
 				// Its not a timeout, throwing the error
 				throw $e;
-				return false;
+				return False;
 			} else {
 				// Its a timeout, trying to reconnect after $this->timeoutReconnect seconds
 				if(!is_numeric($this->timeoutReconnect) || $this->timeoutReconnect < 0) {
@@ -195,11 +197,13 @@ class MorePDO extends PDO {
 				trigger_error($e->getMessage()." => Trying to reconnect in ".$this->timeoutReconnect." seconds", E_USER_WARNING);
 				error_log(str_replace(__DIR__."/", "", $e->getTraceAsString()));
 				sleep($this->timeoutReconnect);
-				$this->initialized = false;
-				$this->initialize();
+				$this->initialized = False;
+
+				// Returns False if the initialization has failed or True if it succeeded
+				return $this->initialize();
 			}
 		}
-		return true;
+		return True;
 	}
 
 	/**
@@ -274,7 +278,7 @@ class MorePDO extends PDO {
 	 * @return boolean
 	 */
 	public function beginTransaction() {
-		$this->initialize();
+		if(!$this->initialize()) return False;
 		return parent::beginTransaction();
 	}
 
@@ -285,7 +289,7 @@ class MorePDO extends PDO {
 	 */
 	public function commit() {
 		if(defined("DEBUG")) { echo "DEBUG: MorePDO->".__FUNCTION__."(".trim($statement).", ".implode(", ", $args).")\n"; }
-		$this->initialize();
+		if(!$this->initialize()) return False;
 		return parent::commit();
 	}
 
@@ -317,7 +321,7 @@ class MorePDO extends PDO {
 	 */
 	public function exec($statement) {
 		if(defined("DEBUG")) { echo "DEBUG: MorePDO->".__FUNCTION__."(".trim($statement).")\n"; }
-		$this->initialize();
+		if(!$this->initialize()) return False;
 		return parent::exec($statement);
 	}
 
@@ -328,7 +332,7 @@ class MorePDO extends PDO {
 	 * @return mixed
 	 */
 	public function getAttribute($attribute) {
-		$this->initialize();
+		if(!$this->initialize()) return False;
 		return parent::getAttribute($attribute);
 	}
 
@@ -343,7 +347,7 @@ class MorePDO extends PDO {
 	 * @return boolean
 	 */
 	public function inTransaction() {
-		$this->initialize();
+		if(!$this->initialize()) return False;
 		return parent::inTransaction();
 	}
 
@@ -354,7 +358,7 @@ class MorePDO extends PDO {
 	 * @return string
 	 */
 	public function lastInsertId($name = null) {
-		$this->initialize();
+		if(!$this->initialize()) return False;
 		return parent::lastInsertId($name);
 	}
 
@@ -366,7 +370,7 @@ class MorePDO extends PDO {
 	 * @return \PDOStatement
 	 */
 	public function prepare($statement, $driver_options = []) {
-		$this->initialize();
+		if(!$this->initialize()) return False;
 		return parent::prepare($statement, $driver_options);
 	}
 
@@ -378,7 +382,7 @@ class MorePDO extends PDO {
 	 */
 	public function query($statement) {
 		if(defined("DEBUG")) { echo "DEBUG: MorePDO->".__FUNCTION__."(".trim($statement).")\n"; }
-		$this->initialize();
+		if(!$this->initialize()) return False;
 		return call_user_func_array('parent::query', func_get_args());
 	}
 
@@ -388,7 +392,7 @@ class MorePDO extends PDO {
 	 * @return boolean
 	 */
 	public function rollback() {
-		$this->initialize();
+		if(!$this->initialize()) return False;
 		return parent::rollBack();
 	}
 
@@ -404,7 +408,7 @@ class MorePDO extends PDO {
 		if ($this->initialized) {
 			return parent::setAttribute($attribute, $value);
 		} else {
-			return true;
+			return True;
 		}
 	}
 }
