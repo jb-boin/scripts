@@ -1,70 +1,5 @@
 <?php
 /**
- * mysqli_*() functions emulation using (More)PDO : For a quick and easy transition from mysql(i)_*() functions to (More)PDO with mostly function name substitution and no complex code rewrite
- * Known limitation : Functions such as $mysqli->fetch_*() cannot be directly converted to $pdo->fetch_*(), it must either be replaced by PDO_fetch_*($dbh) or by $dbh->fetch(PDO::FETCH_*)
- */
-// mysqli_query() emulation for smoother scripts transition, works as mysqli_query() but returns a PDOStatement object
-function PDO_query($dbh, $query) {
-	if(!($dbh instanceof PDO)) trigger_error("Connection handle is not a PDO object !", E_USER_ERROR);
-
-	return $dbh->query($query);
-}
-
-// mysqli_fetch_array() emulation for smoother scripts transition, works as mysqli_fetch_array() but takes a PDOStatement object as argument
-function PDO_fetch_array($PDOStatement, $type = MYSQLI_BOTH) {
-	if($type == MYSQLI_BOTH) {
-		return $PDOStatement->fetch(PDO::FETCH_BOTH);
-	} elseif($type == MYSQLI_ASSOC) {
-		return $PDOStatement->fetch(PDO::FETCH_ASSOC);
-	} elseif($type == MYSQLI_NUM) {
-		return $PDOStatement->fetch(PDO::FETCH_NUM);
-	} else {
-		trigger_error("Invalid result type passed !", E_USER_WARNING);
-		return $PDOStatement->fetch(PDO::FETCH_BOTH);
-	}
-}
-
-// mysqli_fetch_assoc() emulation for smoother scripts transition, works as mysqli_fetch_assoc() but takes a PDOStatement object as argument
-function PDO_fetch_assoc($PDOStatement) {
-	return $PDOStatement->fetch(PDO::FETCH_ASSOC);
-}
-
-// mysqli_fetch_row() emulation for smoother scripts transition, works as mysqli_fetch_row() but takes a PDOStatement object as argument
-function PDO_fetch_row($PDOStatement) {
-	return $PDOStatement->fetch(PDO::FETCH_NUM);
-}
-
-// mysqli_fetch_object() emulation for smoother scripts transition, works as mysqli_fetch_object() but takes a PDOStatement object as argument
-function PDO_fetch_object($PDOStatement) {
-	return $PDOStatement->fetch(PDO::FETCH_OBJ);
-}
-
-// mysqli_num_rows() emulation for smoother scripts transition, works as mysqli_num_rows() but takes a PDOStatement object as argument
-function PDO_num_rows($PDOStatement) {
-	return $PDOStatement->rowCount();
-}
-
-// mysqli_affected_rows() emulation for smoother scripts transition, works as mysqli_affected_rows() but takes a PDOStatement object as argument
-function PDO_affected_rows($dbh) {
-	return $dbh->query("SELECT FOUND_ROWS();")->fetchColumn();
-}
-
-// mysqli_insert_id() emulation for smoother scripts transition, works as mysqli_insert_id() but takes a PDOStatement object as argument
-function PDO_insert_id($PDOStatement) {
-	return $PDOStatement->lastInsertId();
-}
-
-// mysqli_close() emulation, calls MorePDO::disconnect()
-function PDO_close($dbh) {
-	if(!($dbh instanceof MorePDO)) {
-		trigger_error("Only MorePDO object can gracefully close connection to server with this function.", E_USER_WARNING);
-		return False;
-	} else {
-		return $dbh->disconnect();
-	}
-}
-
-/**
  * Class extending PDO with those additions :
  * Connects to the database at the first real query rather than when the object is created (lazy connection)
  * Adds the method "run()" to do in one command what is usually done with a "prepare()" followed by an "execute()"
@@ -413,4 +348,70 @@ class MorePDO extends PDO {
 	}
 }
 
+
+/**
+ * mysqli_*() functions emulation using (More)PDO : For a quick and easy transition from mysql(i)_*() functions to (More)PDO with mostly function name substitution and no complex code rewrite
+ * Known limitation : Functions such as $mysqli->fetch_*() cannot be directly converted to $pdo->fetch_*(), it must either be replaced by PDO_fetch_*($dbh) or by $dbh->fetch(PDO::FETCH_*)
+ */
+
+// mysqli_query() emulation for smoother scripts transition, works as mysqli_query() but returns a PDOStatement object
+function PDO_query($dbh, $query) {
+	if(!($dbh instanceof PDO)) trigger_error("Connection handle is not a PDO object !", E_USER_ERROR);
+
+	return $dbh->query($query);
+}
+
+// mysqli_fetch_array() emulation for smoother scripts transition, works as mysqli_fetch_array() but takes a PDOStatement object as argument
+function PDO_fetch_array($PDOStatement, $type = MYSQLI_BOTH) {
+	if($type == MYSQLI_BOTH) {
+		return $PDOStatement->fetch(PDO::FETCH_BOTH);
+	} elseif($type == MYSQLI_ASSOC) {
+		return $PDOStatement->fetch(PDO::FETCH_ASSOC);
+	} elseif($type == MYSQLI_NUM) {
+		return $PDOStatement->fetch(PDO::FETCH_NUM);
+	} else {
+		trigger_error("Invalid result type passed !", E_USER_WARNING);
+		return $PDOStatement->fetch(PDO::FETCH_BOTH);
+	}
+}
+
+// mysqli_fetch_assoc() emulation for smoother scripts transition, works as mysqli_fetch_assoc() but takes a PDOStatement object as argument
+function PDO_fetch_assoc($PDOStatement) {
+	return $PDOStatement->fetch(PDO::FETCH_ASSOC);
+}
+
+// mysqli_fetch_row() emulation for smoother scripts transition, works as mysqli_fetch_row() but takes a PDOStatement object as argument
+function PDO_fetch_row($PDOStatement) {
+	return $PDOStatement->fetch(PDO::FETCH_NUM);
+}
+
+// mysqli_fetch_object() emulation for smoother scripts transition, works as mysqli_fetch_object() but takes a PDOStatement object as argument
+function PDO_fetch_object($PDOStatement) {
+	return $PDOStatement->fetch(PDO::FETCH_OBJ);
+}
+
+// mysqli_num_rows() emulation for smoother scripts transition, works as mysqli_num_rows() but takes a PDOStatement object as argument
+function PDO_num_rows($PDOStatement) {
+	return $PDOStatement->rowCount();
+}
+
+// mysqli_affected_rows() emulation for smoother scripts transition, works as mysqli_affected_rows() but takes a PDOStatement object as argument
+function PDO_affected_rows($dbh) {
+	return $dbh->query("SELECT FOUND_ROWS();")->fetchColumn();
+}
+
+// mysqli_insert_id() emulation for smoother scripts transition, works as mysqli_insert_id() but takes a PDOStatement object as argument
+function PDO_insert_id($PDOStatement) {
+	return $PDOStatement->lastInsertId();
+}
+
+// mysqli_close() emulation, calls MorePDO::disconnect()
+function PDO_close($dbh) {
+	if(!($dbh instanceof MorePDO)) {
+		trigger_error("Only MorePDO object can gracefully close connection to server with this function.", E_USER_WARNING);
+		return False;
+	} else {
+		return $dbh->disconnect();
+	}
+}
 ?>
