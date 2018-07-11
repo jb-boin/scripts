@@ -5,6 +5,7 @@
  * Adds the method "run()" to do in one command what is usually done with a "prepare()" followed by an "execute()"
  * Adds the method "disconnect()" that does kill the connection from itself (KILL CONNECTION CONNECTION_ID()) (MariaDB/MySQL specific)
  * Adds the method "ping()" that does test if the connection is still working ; tries to reconnect if it did a graceful timeout (MariaDB/MySQL specific)
+ * Adds the method getDSN() to get the DSN of a connction from outside the class, useful to manually display debug/information messages when PDO::ERRMODE_WARNING or PDO::ERRMODE_SILENT is used
  * Adds the $timeoutReconnect variable to set the delay to wait before trying to reconnect in case of timeout/disconnection of the server (MariaDB/MySQL specific)
  * Automatically executes "ping()" before executing queries if the last "ping()" has been ran more than 4 seconds ago
  * Hides the database password on "connect()" backtraces
@@ -345,6 +346,13 @@ class MorePDO extends PDO {
 		} else {
 			return True;
 		}
+	}
+
+	/**
+	 * Returns the DSN of the connection
+	 */
+	public function getDSN() {
+		return $this->dsn;
 	}
 }
 
