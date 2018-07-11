@@ -75,6 +75,13 @@ class MorePDO extends PDO {
 			try {
 				// Creates the PDO object : Does the connection to the database
 				parent::__construct($this->dsn, $this->username, $this->password, $this->options);
+				if(!isset($this)) {
+					// If the construct fails (and does not throw an error), $this is destroyed
+					// If PDO::ERRMODE_EXCEPTION is set, an exception triggers a fatal error
+					if($PDOerrMode == PDO::ERRMODE_EXCEPTION) trigger_error("PDO::_construct() has failed for ".$this->dsn." with the user ".$this->username." !", E_USER_ERROR);
+					else trigger_error("PDO::_construct() has failed for ".$this->dsn." with the user ".$this->username." !", E_USER_WARNING);
+					return False;
+				}
 				$this->initialized = True;
 				$this->lastPing = time();
 
