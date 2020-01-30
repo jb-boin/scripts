@@ -133,6 +133,9 @@ class MorePDO {
 	 */
 	public function ping() {
 		$this->lastPing = time();
+		// SQLite database are on a local file and does not use a network connection
+		if($this->getAttribute(PDO::ATTR_DRIVER_NAME) == "sqlite") return True;
+
 		try {
 			// An exception is only thrown if PDO::ATTR_ERRMODE is set to PDO::ERRMODE_EXCEPTION
 			if($this->exec("DO 1") === False) {
@@ -349,7 +352,7 @@ class MorePDO {
 	 */
 	public function prepare($statement, $driver_options = []) {
 		if(!$this->initialize()) return False;
-		return $this->PDOinstance->prepare($statement, $driver_options);
+		return $this->PDOinstance->prepare(trim($statement), $driver_options);
 	}
 
 	/**
@@ -359,7 +362,8 @@ class MorePDO {
 	 * @return \PDOStatement
 	 */
 	public function query($statement) {
-		if(defined("DEBUG")) { echo "DEBUG: MorePDO->".__FUNCTION__."(".trim($statement).")\n"; }
+		$statement = trim($statement);
+		if(defined("DEBUG")) { echo "DEBUG: MorePDO->".__FUNCTION__."(".$statement.")\n"; }
 		if(!$this->initialize()) return False;
 		return call_user_func_array(array($this->PDOinstance, "query"), func_get_args());
 	}
