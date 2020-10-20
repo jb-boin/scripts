@@ -2,7 +2,7 @@
 /**
  * Class enhancing PDO with those additions :
  * Connects to the database at the first real query rather than when the object is created (lazy connection)
- * Adds the method "run()" to do in one command what is usually done with a "prepare()" followed by an "execute()"
+ * Adds the method "run()" to do in one command what is usually done with a "prepare()" followed by an "execute()" and it forces binded parameters passed as integers to be binded as PDO::PARAM_INT to avoid errors if used with LIMIT (and possible other similar cases)
  * Adds the method "disconnect()" that does kill the connection from itself (KILL CONNECTION CONNECTION_ID()) (MariaDB/MySQL specific)
  * Adds the method "ping()" that does test if the connection is still working ; tries to reconnect if it did a graceful timeout (MariaDB/MySQL specific)
  * Adds the method getDSN() to get the DSN of a connction from outside the class, useful to manually display debug/information messages when PDO::ERRMODE_WARNING or PDO::ERRMODE_SILENT is used
@@ -54,6 +54,7 @@ class MorePDO {
 			PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
 			PDO::ATTR_EMULATE_PREPARES => False,
 			PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+			PDO::ATTR_TIMEOUT => 10,
 		];
 
 		$this->options = array_replace($default_options, $options);
@@ -212,16 +213,40 @@ class MorePDO {
 	 * @param array $args
 	 * @return \PDOStatement
 	 */
-	public function run($statement, $args = NULL) {
+	public function run($statement, array $args = NULL) {
 		if(defined("DEBUG")) {
-			if(isset($args))	echo "DEBUG: MorePDO->run(".trim($statement).", ".implode(", ", $args).")\n";
-			else			echo "DEBUG: MorePDO->run(".trim($statement).", NULL)\n";
+			if(empty($args)) {
+				echo "DEBUG: MorePDO->run(".trim($statement).", NULL)\n";
+			} else {
+				// Display a debug message with the query and it's binded parameters
+				echo "DEBUG: MorePDO->run(".trim($statement).", array(";
+				foreach($args as $arg => &$value) {
+					if(isset($notFirstElement)) echo ", ";
+					echo escapeshellarg($arg)." => ".(is_int($value) ? $value : escapeshellarg($value));
+					$notFirstElement = True;
+				}
+				$arg = substr($arg, 0, -2);
+				echo "));\n";
+			}
 		}
 		if (!$args) {
+			// The query has no binded parameters, returning directly query($statement);
 			return $this->query($statement);
 		}
 		if($stmt = $this->prepare($statement)) {
-			if(!$stmt->execute($args)) {
+			// Loop on each binded parameters to bind them one by one to be able to specify the data type of the parameter and have a specific error in case of a failure
+			foreach($args as $arg => &$value) {
+				// Forcing PDO::PARAM_INT if the value is an integer to avoid errors in case it is used for a LIMIT statement (PDOStatement::bindParam normally transforms all values as PDO::PARAM_STR if $stmt->execute($args) is directly passed)
+				if(is_int($value))	$param_type = PDO::PARAM_INT;
+				else			$param_type = PDO::PARAM_STR;
+
+				if(!$stmt->bindParam($arg, $value, $param_type)) {
+					error_log("Error during preparation of the parameter ".escapeshellarg($arg)." => ".(is_int($value) ? $value : escapeshellarg($value))." of type $param_type of the query '$statement', execution aborted !");
+					// To avoid fatal errors if executing/preparing an incorrect query while PDO::ERRMODE_SILENT or WARNING is set and PDOStatement methods are called on it (ex: $dbh->run("BAD QUERY")->fetch();)
+					return new PDOStatement();
+				}
+			}
+			if(!$stmt->execute()) {
 				error_log("Error during execution of query '$statement' !");
 			}
 			return $stmt;
