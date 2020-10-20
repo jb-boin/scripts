@@ -214,6 +214,12 @@ class MorePDO {
 	 * @return \PDOStatement
 	 */
 	public function run($statement, array $args = NULL) {
+		if(isset($args) && isset($args[0])) {
+			// The parameters have been binded without specifying a name (using ?), in this case, the first binded parameter must have the key 1 and not 0 so the array keys are incremented and the parameter 0 removed
+			array_unshift($args, "");
+			unset($args[0]);
+		}
+
 		if(defined("DEBUG")) {
 			if(empty($args)) {
 				echo "DEBUG: MorePDO->run(".trim($statement).", NULL)\n";
@@ -222,7 +228,7 @@ class MorePDO {
 				echo "DEBUG: MorePDO->run(".trim($statement).", array(";
 				foreach($args as $arg => &$value) {
 					if(isset($notFirstElement)) echo ", ";
-					echo escapeshellarg($arg)." => ".(is_int($value) ? $value : escapeshellarg($value));
+					echo (is_int($arg) ? $arg : escapeshellarg($arg))." => ".(is_int($value) ? $value : escapeshellarg($value));
 					$notFirstElement = True;
 				}
 				$arg = substr($arg, 0, -2);
