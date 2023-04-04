@@ -139,7 +139,7 @@ class MorePDO {
 
 		try {
 			// An exception is only thrown if PDO::ATTR_ERRMODE is set to PDO::ERRMODE_EXCEPTION
-			if($this->exec("DO 1") === False) {
+			if(($this->getAttribute(PDO::ATTR_DRIVER_NAME) == "mysql" && $this->exec("DO 1") === False) || $this->exec("SELECT 1") === False) {
 				// The query failed and no exception has been thrown (PDO::ERRMODE_SILENT or PDO::ERRMODE_WARNING)
 				if($this->getAttribute(PDO::ATTR_DRIVER_NAME) != "mysql" || $this->errorCode() != "HY000" || !stristr($this->errorInfo()[2], "server has gone away")) {
 					// The error is not a graceful MySQL timeout
