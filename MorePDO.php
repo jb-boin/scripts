@@ -134,14 +134,18 @@ class MorePDO {
 	 */
 	public function ping() {
 		$this->lastPing = time();
+		$driverName = $this->getAttribute(PDO::ATTR_DRIVER_NAME);
+
 		// SQLite database are on a local file and does not use a network connection
-		if($this->getAttribute(PDO::ATTR_DRIVER_NAME) == "sqlite") return True;
+		if($driverName == "sqlite") return True;
+		elseif($driverName == "mysql") $testQuery = "DO 1";
+		else $testQuery = "SELECT 1";
 
 		try {
 			// An exception is only thrown if PDO::ATTR_ERRMODE is set to PDO::ERRMODE_EXCEPTION
-			if(($this->getAttribute(PDO::ATTR_DRIVER_NAME) == "mysql" && $this->exec("DO 1") === False) || $this->exec("SELECT 1") === False) {
+			if($this->exec($testQuery) === False) {
 				// The query failed and no exception has been thrown (PDO::ERRMODE_SILENT or PDO::ERRMODE_WARNING)
-				if($this->getAttribute(PDO::ATTR_DRIVER_NAME) != "mysql" || $this->errorCode() != "HY000" || !stristr($this->errorInfo()[2], "server has gone away")) {
+				if($driverName != "mysql" || $this->errorCode() != "HY000" || !stristr($this->errorInfo()[2], "server has gone away")) {
 					// The error is not a graceful MySQL timeout
 					trigger_error("SQLSTATE[".$this->errorCode()."]: General error: ".$this->errorInfo()[1]." ".$this->errorInfo()[2], E_USER_WARNING);
 					return False;
@@ -161,7 +165,7 @@ class MorePDO {
 			}
 		} catch (PDOException $e) {
 			// wait_timeout or server restarted since last check ; this error code/message is specific to MySQL, will always throw a PDOException for other drivers
-			if($this->getAttribute(PDO::ATTR_DRIVER_NAME) != "mysql" || $e->getCode() != "HY000" || !stristr($e->getMessage(), "server has gone away")) {
+			if($driverName != "mysql" || $e->getCode() != "HY000" || !stristr($e->getMessage(), "server has gone away")) {
 				// The error is not a graceful MySQL timeout, throwing the error
 				throw $e;
 				return False;
