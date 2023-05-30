@@ -134,6 +134,10 @@ class MorePDO {
 	 */
 	public function ping() {
 		$this->lastPing = time();
+
+		// Initializes the connection if it has not been done previously and return False if initialize() fails
+		if (!$this->initialized && !$this->initialize()) return False;
+
 		$driverName = $this->getAttribute(PDO::ATTR_DRIVER_NAME);
 
 		// SQLite database are on a local file and does not use a network connection
@@ -155,7 +159,7 @@ class MorePDO {
 						trigger_error("Invalid value for timeoutReconnect (".$this->timeoutReconnect."), forcing a 30 seconds value !", E_USER_WARNING);
 						$this->timeoutReconnect = 30;
 					}
-					trigger_error("The MySQL server has gone away => Trying to reconnect in ".$this->timeoutReconnect." seconds", E_USER_WARNING);
+					trigger_error("The MySQL server for ".$this->dsn." has gone away => Trying to reconnect in ".$this->timeoutReconnect." seconds", E_USER_WARNING);
 					sleep($this->timeoutReconnect);
 					$this->initialized = False;
 
@@ -195,7 +199,7 @@ class MorePDO {
 	 */
 	public function disconnect() {
 		if($this->initialized) {
-			if(defined("DEBUG")) { echo "DEBUG: MorePDO->".__FUNCTION__."(): Setting PDO object to Null\n"; }
+			if(defined("DEBUG")) { echo "DEBUG: MorePDO->".__FUNCTION__."(): Setting PDO object to Null for ".$this->dsn."\n"; }
 			$this->PDOinstance = Null;
 			$this->initialized = False;
 			return True;
@@ -338,10 +342,10 @@ class MorePDO {
 	public function getAttribute($attribute) {
 		// If the PDO object hit an error, calling getAttribute() will return the result then destroy the PDO object which might be problematic in case of a timeout
 		if(isset($this->attributes[$attribute])) {
-			if(defined("DEBUG")) { echo "DEBUG: MorePDO->".__FUNCTION__."($attribute): Returning the attribute from \$this->attributes[] : ".$this->attributes[$attribute]."\n"; }
+			if(defined("DEBUG")) { echo "DEBUG: MorePDO->".__FUNCTION__."($attribute): Returning the attribute for ".$this->dsn." from \$this->attributes[] : ".$this->attributes[$attribute]."\n"; }
 			return $this->attributes[$attribute];
 		} elseif(is_object($this->PDOinstance)) {
-			if(defined("DEBUG")) { echo "DEBUG: MorePDO->".__FUNCTION__."($attribute): Returning attribute value from the PDO object : ".$this->PDOinstance->getAttribute($attribute)."\n"; }
+			if(defined("DEBUG")) { echo "DEBUG: MorePDO->".__FUNCTION__."($attribute): Returning attribute value for ".$this->dsn." from the PDO object : ".$this->PDOinstance->getAttribute($attribute)."\n"; }
 			return $this->PDOinstance->getAttribute($attribute);
 		} else {
 			return False;
